@@ -4,6 +4,7 @@
  * ARM pipeline timing simulator
  */
 //#include "sim.c"
+#include "cache.h"
 #include "pipe.h"
 #include "shell.h"
 #include "helper.h"
@@ -35,12 +36,15 @@
 int branch_taken = -1;
 CPU_State CURRENT_STATE;
 Pipeline_Regs CURRENT_REGS, START_REGS;
-//bp_t *BP = malloc(sizeof(bp_t));
 bp_t BP;
 /* FLAGS */
 int FETCH_MORE = 1;
 int BUBBLE = 0;
 int BRANCH_STALL = 0;
+
+
+cache_t *theInstructionCache;
+cache_t *theDataCache;
 /* Notes on forwarding:
  * For bubbling, need to implement a control for each function
  * For forwarding - need to forward in the ID stage of each dependent instruction
@@ -388,8 +392,8 @@ void pipe_cycle() {
 }
 
 void pipe_stage_wb() {
-	printf("Write BACK -----------> ");
-	print_operation(CURRENT_REGS.MEM_WB.instruction);
+	// printf("Write BACK -----------> ");
+	// print_operation(CURRENT_REGS.MEM_WB.instruction);
 	if (CURRENT_REGS.MEM_WB.instruction == 0) {
 		//printf("Write Back Stage Skipped\n");
 		return;
@@ -446,8 +450,8 @@ void pipe_stage_wb() {
 }
 
 void pipe_stage_mem() {
-	printf("Memory -----------> ");
-	print_operation(CURRENT_REGS.EX_MEM.instruction);
+	// printf("Memory -----------> ");
+	// print_operation(CURRENT_REGS.EX_MEM.instruction);
 
 	if (CURRENT_REGS.EX_MEM.instruction == 0) {
 		//printf("Memmeory Stage Skipped\n");
@@ -491,10 +495,10 @@ void pipe_stage_mem() {
 
 // R INSTR EXECUTE STAGE
 void pipe_stage_execute() {
-	printf("Execute -----------> ");
-	print_operation(CURRENT_REGS.ID_EX.instruction);
+	// printf("Execute -----------> ");
+	// print_operation(CURRENT_REGS.ID_EX.instruction);
 
-	printf("PC OF INSTRUCTION TO EXECUTE: %x. PC OF NEXT INSTRUCTION: %x\n", CURRENT_REGS.ID_EX.PC, CURRENT_REGS.IF_ID.PC);
+	// printf("PC OF INSTRUCTION TO EXECUTE: %x. PC OF NEXT INSTRUCTION: %x\n", CURRENT_REGS.ID_EX.PC, CURRENT_REGS.IF_ID.PC);
 
 	if (CURRENT_REGS.ID_EX.instruction == 0) {
 		//printf("Execute Skipped\n");
@@ -647,8 +651,8 @@ void pipe_stage_execute() {
 
 
 void pipe_stage_decode() {
-	printf("Decode -----------> ");
-	print_operation(CURRENT_REGS.IF_ID.instruction);
+	// printf("Decode -----------> ");
+	// print_operation(CURRENT_REGS.IF_ID.instruction);
 
 	if (BUBBLE != 0) {
 		return;
@@ -717,11 +721,24 @@ void pipe_stage_decode() {
 }
 
 void pipe_stage_fetch() {
-	printf("Fetch -----------> ");
+	if (stat_cycles == 0) {
+		// printf("FIRST ITERATION; INITIALIZE CACHES\n");
+		theInstructionCache = instruction_cache_new();
+		theDataCache = data_cache_new();
+	}
+	int myInstructionCacheMissed = cache_update(theInstructionCache, CURRENT_STATE.PC);
+	// print_cache(theInstructionCache);
+	if (myInstructionCacheMissed == 1) {
+		// stall 50 cycles
+		FETCH_MORE = -50;
+	}
+
+	// printf("Fetch -----------> ");
 	if (BRANCH_STALL == 1) {
-		//printf("STALLING\n");
+		printf("BRANCH STALL\n");
 		clear_IF_ID_REGS();
 		BRANCH_STALL = 0;
+		FETCH_MORE++;
 		return;
 	} else if (BUBBLE != 0) {
 		//printf("BUBBLE\n");
@@ -729,12 +746,17 @@ void pipe_stage_fetch() {
 	}
 
 
-	if (FETCH_MORE != 0) {
+	if (FETCH_MORE >= 0) {
+		printf("CACHE HIT\n");
 		clear_IF_ID_REGS();
 		CURRENT_REGS.IF_ID.instruction = mem_read_32(CURRENT_STATE.PC);
-		print_operation(CURRENT_REGS.IF_ID.instruction);
+		// print_operation(CURRENT_REGS.IF_ID.instruction);
+		printf("\n");
 		CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
 		bp_predict();
 		//CURRENT_STATE.PC += 4;
-	} 
+	} else {
+		printf("CACHE MISSED WE ARE STALLING FOR %d MORE CYCLES\n", -FETCH_MORE);
+		FETCH_MORE++;
+	}
 }

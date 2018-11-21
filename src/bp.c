@@ -93,7 +93,7 @@ void bp_predict() {
     		myPCPrediction = BP.BTB[myBTB_index].branch_target;
     	}
     }
-    printf("PREDICTING: %x\n", myPCPrediction);
+    // printf("PREDICTING: %x\n", myPCPrediction);
     CURRENT_STATE.PC = myPCPrediction;
 }
 

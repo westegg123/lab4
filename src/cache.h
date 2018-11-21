@@ -11,7 +11,9 @@
 
 typedef struct 
 {
-	uint32_t written_data;
+	uint32_t *written_data;
+	uint32_t tag;
+	int last_used_iteration;
 } cache_block_t;
 
 typedef struct 
@@ -27,8 +29,10 @@ typedef struct
 	int block;
 } cache_t;
 
-cache_t *cache_new(int sets, int ways, int block);
+cache_t *instruction_cache_new();
+cache_t *data_cache_new();
 void cache_destroy(cache_t *c);
-int cache_update(cache_t *c, uint64_t addr);
+void print_cache();
+int cache_update(cache_t *c, /*uint64_t*/uint32_t addr);
 
 #endif

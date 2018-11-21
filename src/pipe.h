@@ -7,11 +7,11 @@
 #ifndef _PIPE_H_
 #define _PIPE_H_
 
+#include "cache.h"
 #include "shell.h"
 #include "stdbool.h"
 #include "helper.h"
 #include <limits.h>
-
 
 typedef struct CPU_State {
 	/* register file state */
