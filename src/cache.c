@@ -28,6 +28,7 @@ cache_t *cache_new(int aSets, int aWays, int aBlock) {
 			myCacheSets[i].cache_blocks[j].written_data = calloc(8, sizeof(uint32_t));
 			myCacheSets[i].cache_blocks[j].last_used_iteration = 0;
 			myCacheSets[i].cache_blocks[j].tag = -1;
+			myCacheSets[i].cache_blocks[j].bit = 0;
 		}
 	}
 	return myCache;
@@ -124,7 +125,6 @@ void cache_destroy(cache_t *aCache) {
 	free(aCache);
 }
 
-
 int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) {
 	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
 	int mySetIndex = get_instruction_cache_set_index(aAddr);
@@ -146,3 +146,103 @@ int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) 
 	}
 }
 
+
+/********************* FOR DATA CACHES ***************************/
+// Get the Address that points to the that set and tag with offset 0;
+uint32_t get_OriginAddr(int aTag, int aSetIndex) {
+	return ((aTag << 13) | (aSetIndex << 5));
+}
+
+// Get the Data from a Cache Block
+uint32_t get_specific_data_from_block(cache_block_t *aCacheBlock, int aBlockOffset) {
+	return ((aCacheBlock->written_data)[aBlockOffset]);
+}
+
+void write_specific_data_to_block(cache_block_t *aCacheBlock, int aBlockOffset, uint32_t data) {
+	(aCacheBlock->written_data)[aBlockOffset] = data;
+}
+
+// Write the Block back to memory to handle evictions
+void write_back_block_to_mem(cache_block_t *aCacheBlock, uint32_t aOriginAddr) {
+	int offset = 0;
+	for (int i = 0; i < 8; i++) {
+		mem_write_32((aOriginAddr + offset), aCacheBlock->written_data[i]);
+		offset += 4;
+	}	
+}
+
+// Used to get data from memory if cache does not have the data
+// Loads a brand new block
+cache_block_t *load_cache_block_DC(cache_set_t *aCacheSet, int aWays, uint32_t aAddr) {
+	
+	cache_block_t *myTargetBlock = least_recently_used_block(aCacheSet, aWays);
+	uint32_t myTag = get_instruction_cache_tag(aAddr);	
+	int offset = 0;
+
+	uint32_t myOriginAddr = get_OriginAddr(myTag, get_instruction_cache_set_index(aAddr));
+
+	if (myTargetBlock->dirty_bit == 1) {
+		write_back_block_to_mem(myTargetBlock, myOriginAddr);
+	}
+
+	for (int i = 0; i < 8; i++) {
+		(myTargetBlock->written_data)[i] = mem_read_32(myOriginAddr + offset);
+		offset += 4;
+	}
+
+	myTargetBlock->tag = myTag;
+	myTargetBlock->last_used_iteration = stat_cycles;
+	myTargetBlock->dirty_bit = 0;
+	return myTargetBlock;
+}
+
+
+uint32_t *get_data_from_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
+	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
+	int mySetIndex = get_instruction_cache_set_index(aAddr);
+	uint32_t myTag = get_instruction_cache_tag(aAddr);
+
+	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
+	
+	if (myCacheBlock == NULL) {
+		myCacheBlock = load_cache_block_DC(myCacheSet, aDataCache->ways, aAddr);
+	}
+
+	myTargetBlock->last_used_iteration = stat_cycles;
+	
+	return get_specific_data_from_block(myCacheBlock, myBlockOffset);
+}
+
+void write_data_to_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr, uint32_t data) {
+	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
+	int mySetIndex = get_instruction_cache_set_index(aAddr);
+	uint32_t myTag = get_instruction_cache_tag(aAddr);
+
+	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
+
+	if (myCacheBlock == NULL) {
+		myCacheBlock = load_cache_block_DC(myCacheSet, aDataCache->ways, aAddr);
+	}
+	write_specific_data_to_block(myCacheBlock, myBlockOffset, data);
+
+	myTargetBlock->last_used_iteration = stat_cycles;
+	myTargetBlock->dirty_bit = 1;
+}
+
+// THis function writes all of the elements of the data cache to the memory
+void empty_data_cache(cache_t *aDataCache) {
+	int mySets = aDataCache->sets;
+	int myWays = aDataCache->ways;
+
+	for (int s = 0; s < mySets; s++) {
+		cache_set_t *myCacheSet = (aDataCache->cache_sets)[s]; 
+		for (int w = 0; w < myWays; w++) {
+			cache_block_t myCacheBlock = (myCacheSet.cache_blocks)[w];
+			if (myCacheBlock.dirty_bit == 1) {
+				write_back_block_to_mem(&myCacheBlock, get_OriginAddr( myCacheBlock.tag , s));
+			}
+		}
+	}
+}
