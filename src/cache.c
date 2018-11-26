@@ -28,7 +28,7 @@ cache_t *cache_new(int aSets, int aWays, int aBlock) {
 			myCacheSets[i].cache_blocks[j].written_data = calloc(8, sizeof(uint32_t));
 			myCacheSets[i].cache_blocks[j].last_used_iteration = 0;
 			myCacheSets[i].cache_blocks[j].tag = -1;
-			myCacheSets[i].cache_blocks[j].bit = 0;
+			myCacheSets[i].cache_blocks[j].dirty_bit = 0;
 		}
 	}
 	return myCache;
@@ -43,7 +43,7 @@ cache_t *data_cache_new() {
 }
 
 int get_instruction_cache_block_offset(uint32_t aInstruction) {
-	return (int)get_instruction_segment(0, 4, aInstruction);
+	return (int)(get_instruction_segment(0, 4, aInstruction) / 4);
 }
 
 int get_instruction_cache_set_index(uint32_t aInstruction) {
@@ -55,7 +55,7 @@ uint32_t get_instruction_cache_tag(uint32_t aInstruction) {
 }
 
 int get_data_cache_block_offset(uint32_t aData) {
-	return (int)get_instruction_segment(0, 4, aData);
+	return (int)(get_instruction_segment(0, 4, aData) / 4);
 }
 
 int get_data_cache_set_index(uint32_t aData) {
@@ -65,6 +65,26 @@ int get_data_cache_set_index(uint32_t aData) {
 uint32_t get_data_cache_tag(uint32_t aData) {
 	return get_instruction_segment(13, 31, aData);
 }
+
+// Get the Address that points to the that set and tag with offset 0 for instruction cache
+uint32_t get_OriginAddr_IC(int aTag, int aSetIndex) {
+	return (uint32_t)((aTag << 11) | (aSetIndex << 5));
+}
+
+// Get the Address that points to the that set and tag with offset 0 for Data Cache
+uint32_t get_OriginAddr_DC(int aTag, int aSetIndex) {
+	return (uint32_t)((aTag << 13) | (aSetIndex << 5));
+}
+
+// Get the Data from a Cache Block
+uint32_t get_specific_data_from_block(cache_block_t *aCacheBlock, int aBlockOffset) {
+	return (uint32_t)((aCacheBlock->written_data)[aBlockOffset]);
+}
+
+void write_specific_data_to_block(cache_block_t *aCacheBlock, int aBlockOffset, uint32_t data) {
+	(aCacheBlock->written_data)[aBlockOffset] = data;
+}
+
 // Function that allows visualization of cache
 void print_cache(cache_t *aCache) {
 	int sets = aCache->sets;
@@ -86,6 +106,13 @@ void print_cache(cache_t *aCache) {
 	}
 }
 
+void print_block(cache_block_t *aBlock) {
+	for (int k = 0; k < 8; k++) {
+		printf("VALUE AT BLOCK OFFSET %d: ", k+1);
+		printf("%x\n", aBlock->written_data[k]);
+	}
+}
+
 cache_block_t *least_recently_used_block(cache_set_t *aCacheSet, int aWays) {
 	cache_block_t *myLeastRecentlyUsedBlock = NULL;
 	int myCurrentMin = INT_MAX;
@@ -99,6 +126,25 @@ cache_block_t *least_recently_used_block(cache_set_t *aCacheSet, int aWays) {
 	return myLeastRecentlyUsedBlock;
 }
 
+void cache_destroy(cache_t *aCache) {
+	// Maybe consider memset to 0, but I don't think we even need to worry about this function.
+	int mySets = aCache->sets;
+	int myWays = aCache->ways;
+
+	for (int s = 0; s < mySets; s++) {
+		cache_set_t myCacheSet = (aCache->cache_sets)[s]; 
+		for (int w = 0; w < myWays; w++) {
+			cache_block_t myCacheBlock = (myCacheSet.cache_blocks)[w];
+			free(myCacheBlock.written_data);
+		}
+		free((aCache->cache_sets[s]).cache_blocks);
+	}
+
+	free(aCache->cache_sets);
+	free(aCache);
+}
+
+/********************* FOR INSTRUCTION CACHES ***************************/
 cache_block_t *get_tag_match(cache_set_t *aCacheSet, uint32_t aTag, int aAssociativity) {
 	cache_block_t *myTagMatch = NULL;
 	for (int i = 0; i < aAssociativity; i++) {
@@ -106,24 +152,51 @@ cache_block_t *get_tag_match(cache_set_t *aCacheSet, uint32_t aTag, int aAssocia
 			myTagMatch = &(aCacheSet->cache_blocks[i]);
 		}
 	}
+
 	if (!myTagMatch) {
-		printf("NO TAG MATCH FOUND! ");
+		printf("NO TAG MATCH FOUND!\n");
 	}
 	return myTagMatch;
 }
 
-void load_cache_block(cache_block_t *aCacheBlock, uint32_t aAddr) {
+// void load_cache_block(cache_block_t *aCacheBlock, uint32_t aAddr) {
+// 	int offset = 0;
+// 	for (int i = 0; i < 8; i++) {
+// 		aCacheBlock->written_data[i] = (aAddr + offset);
+// 		offset += 4;
+// 	}
+// }
+
+void load_cache_block_IC(cache_block_t *aCacheBlock, uint32_t aTag, uint32_t aSet) {
 	int offset = 0;
+	uint32_t myOriginAddr = get_OriginAddr_IC(aTag, aSet);
 	for (int i = 0; i < 8; i++) {
-		aCacheBlock->written_data[i] = (aAddr + offset);
+		(aCacheBlock->written_data)[i] = mem_read_32(myOriginAddr + offset);
 		offset += 4;
 	}
 }
 
-void cache_destroy(cache_t *aCache) {
-	// Maybe consider memset to 0, but I don't think we even need to worry about this function.
-	free(aCache);
-}
+// int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) {
+// 	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
+// 	int mySetIndex = get_instruction_cache_set_index(aAddr);
+// 	uint32_t myTag = get_instruction_cache_tag(aAddr);
+
+// 	cache_set_t *myCacheSet = &(aInstructionCache->cache_sets[mySetIndex]);
+// 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aInstructionCache->ways);
+// 	// If it is null, there has been no match, and we need to load in a block
+// 	if (myCacheBlock == NULL) {
+// 		printf("TAG MATCH IS NULL!\n");
+// 		myCacheBlock = least_recently_used_block(myCacheSet, aInstructionCache->ways);
+// 		load_cache_block(myCacheBlock, aAddr);
+// 		myCacheBlock->last_used_iteration = stat_cycles;
+// 		myCacheBlock->tag = myTag;
+// 		return 1;
+// 	} else {
+// 		myCacheBlock->last_used_iteration = stat_cycles;
+// 		return 0;
+// 	}
+// }
+
 
 int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) {
 	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
@@ -134,9 +207,8 @@ int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) 
 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aInstructionCache->ways);
 	// If it is null, there has been no match, and we need to load in a block
 	if (myCacheBlock == NULL) {
-		printf("TAG MATCH IS NULL!\n");
 		myCacheBlock = least_recently_used_block(myCacheSet, aInstructionCache->ways);
-		load_cache_block(myCacheBlock, aAddr);
+		load_cache_block_IC(myCacheBlock, myTag, mySetIndex);
 		myCacheBlock->last_used_iteration = stat_cycles;
 		myCacheBlock->tag = myTag;
 		return 1;
@@ -146,22 +218,38 @@ int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) 
 	}
 }
 
+// checks if the data is in the isntruction cache
+int check_data_in_cache_IC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
+	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
+	int mySetIndex = get_instruction_cache_set_index(aAddr);
+	uint32_t myTag = get_instruction_cache_tag(aAddr);
+
+	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
+	return ((myCacheBlock == NULL) ? 1 : 0);
+}
+
+uint32_t get_instruct_from_IC(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) {
+	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
+	int mySetIndex = get_instruction_cache_set_index(aAddr);
+	uint32_t myTag = get_instruction_cache_tag(aAddr);
+
+	printf("This is the set: %x and Tag: %x and offset: %x\n", mySetIndex, myTag, myBlockOffset);
+
+	cache_set_t *myCacheSet = &(aInstructionCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aInstructionCache->ways);
+
+	if (myCacheBlock == NULL) {
+		cache_update(aInstructionCache, aAddr);
+		myCacheBlock = get_tag_match(myCacheSet, myTag, aInstructionCache->ways);
+	}
+
+	myCacheBlock->last_used_iteration = stat_cycles;
+	//print_cache(aInstructionCache);
+	return get_specific_data_from_block(myCacheBlock, myBlockOffset);
+}
 
 /********************* FOR DATA CACHES ***************************/
-// Get the Address that points to the that set and tag with offset 0;
-uint32_t get_OriginAddr(int aTag, int aSetIndex) {
-	return ((aTag << 13) | (aSetIndex << 5));
-}
-
-// Get the Data from a Cache Block
-uint32_t get_specific_data_from_block(cache_block_t *aCacheBlock, int aBlockOffset) {
-	return ((aCacheBlock->written_data)[aBlockOffset]);
-}
-
-void write_specific_data_to_block(cache_block_t *aCacheBlock, int aBlockOffset, uint32_t data) {
-	(aCacheBlock->written_data)[aBlockOffset] = data;
-}
-
 // Write the Block back to memory to handle evictions
 void write_back_block_to_mem(cache_block_t *aCacheBlock, uint32_t aOriginAddr) {
 	int offset = 0;
@@ -174,12 +262,11 @@ void write_back_block_to_mem(cache_block_t *aCacheBlock, uint32_t aOriginAddr) {
 // Used to get data from memory if cache does not have the data
 // Loads a brand new block
 cache_block_t *load_cache_block_DC(cache_set_t *aCacheSet, int aWays, uint32_t aAddr) {
-	
 	cache_block_t *myTargetBlock = least_recently_used_block(aCacheSet, aWays);
-	uint32_t myTag = get_instruction_cache_tag(aAddr);	
+	uint32_t myTag = get_data_cache_tag(aAddr);	
 	int offset = 0;
 
-	uint32_t myOriginAddr = get_OriginAddr(myTag, get_instruction_cache_set_index(aAddr));
+	uint32_t myOriginAddr = get_OriginAddr_DC(myTag, get_data_cache_set_index(aAddr));
 
 	if (myTargetBlock->dirty_bit == 1) {
 		write_back_block_to_mem(myTargetBlock, myOriginAddr);
@@ -196,11 +283,31 @@ cache_block_t *load_cache_block_DC(cache_set_t *aCacheSet, int aWays, uint32_t a
 	return myTargetBlock;
 }
 
+void update_data_cache(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
+	int myBlockOffset = get_data_cache_block_offset(aAddr);
+	int mySetIndex = get_data_cache_set_index(aAddr);
+	uint32_t myTag = get_data_cache_tag(aAddr);
 
-uint32_t *get_data_from_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
-	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
-	int mySetIndex = get_instruction_cache_set_index(aAddr);
-	uint32_t myTag = get_instruction_cache_tag(aAddr);
+	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
+	load_cache_block_DC(myCacheSet, aDataCache->ways, aAddr);
+}
+
+// checks if the data is in the data cache
+int check_data_in_cache_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
+	int myBlockOffset = get_data_cache_block_offset(aAddr);
+	int mySetIndex = get_data_cache_set_index(aAddr);
+	uint32_t myTag = get_data_cache_tag(aAddr);
+
+	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
+	return ((myCacheBlock == NULL) ? 1 : 0);
+}
+
+uint32_t get_data_from_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
+	int myBlockOffset = get_data_cache_block_offset(aAddr);
+	int mySetIndex = get_data_cache_set_index(aAddr);
+	uint32_t myTag = get_data_cache_tag(aAddr);
 
 	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
@@ -209,15 +316,15 @@ uint32_t *get_data_from_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAdd
 		myCacheBlock = load_cache_block_DC(myCacheSet, aDataCache->ways, aAddr);
 	}
 
-	myTargetBlock->last_used_iteration = stat_cycles;
+	myCacheBlock->last_used_iteration = stat_cycles;
 	
 	return get_specific_data_from_block(myCacheBlock, myBlockOffset);
 }
 
 void write_data_to_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr, uint32_t data) {
-	int myBlockOffset = get_instruction_cache_block_offset(aAddr);
-	int mySetIndex = get_instruction_cache_set_index(aAddr);
-	uint32_t myTag = get_instruction_cache_tag(aAddr);
+	int myBlockOffset = get_data_cache_block_offset(aAddr);
+	int mySetIndex = get_data_cache_set_index(aAddr);
+	uint32_t myTag = get_data_cache_tag(aAddr);
 
 	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
@@ -227,8 +334,8 @@ void write_data_to_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr, ui
 	}
 	write_specific_data_to_block(myCacheBlock, myBlockOffset, data);
 
-	myTargetBlock->last_used_iteration = stat_cycles;
-	myTargetBlock->dirty_bit = 1;
+	myCacheBlock->last_used_iteration = stat_cycles;
+	myCacheBlock->dirty_bit = 1;
 }
 
 // THis function writes all of the elements of the data cache to the memory
@@ -237,11 +344,11 @@ void empty_data_cache(cache_t *aDataCache) {
 	int myWays = aDataCache->ways;
 
 	for (int s = 0; s < mySets; s++) {
-		cache_set_t *myCacheSet = (aDataCache->cache_sets)[s]; 
+		cache_set_t myCacheSet = (aDataCache->cache_sets)[s]; 
 		for (int w = 0; w < myWays; w++) {
 			cache_block_t myCacheBlock = (myCacheSet.cache_blocks)[w];
 			if (myCacheBlock.dirty_bit == 1) {
-				write_back_block_to_mem(&myCacheBlock, get_OriginAddr( myCacheBlock.tag , s));
+				write_back_block_to_mem(&myCacheBlock, get_OriginAddr_DC(myCacheBlock.tag, s));
 			}
 		}
 	}

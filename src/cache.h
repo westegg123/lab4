@@ -34,6 +34,18 @@ cache_t *instruction_cache_new();
 cache_t *data_cache_new();
 void cache_destroy(cache_t *c);
 void print_cache();
+
+// INSTRUCTION CACHE FUNCTIONS
 int cache_update(cache_t *c, /*uint64_t*/uint32_t addr);
-uint32_t get_data_from_cach(cache_t *c, /*uint64_t*/uint32_t addr);
+int check_data_in_cache_IC(cache_t *c, /*uint64_t*/uint32_t addr);
+uint32_t get_instruct_from_IC(cache_t *c, /*uint64_t*/uint32_t addr);
+
+// DATA CACHE FUNCTIONS
+void update_data_cache(cache_t *c, /*uint64_t*/uint32_t addr);
+int check_data_in_cache_DC(cache_t *c, /*uint64_t*/uint32_t addr);
+uint32_t get_data_from_DC(cache_t *c, /*uint64_t*/uint32_t addr);
+void write_data_to_DC(cache_t *c, /*uint64_t*/uint32_t addr, uint32_t data);
+void empty_data_cache(cache_t* c);
+
+
 #endif
