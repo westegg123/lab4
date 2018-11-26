@@ -484,10 +484,10 @@ void pipe_stage_wb() {
 void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER) {
 	int myDataCacheMissed = 0;
 	if (CYCLE_STALL_DATA_CACHE == 0) {
-		myDataCacheMissed = check_data_in_cache_DC(theDataCache, CURRENT_REGS.EX_MEM.instruction);
+		myDataCacheMissed = check_data_in_cache_DC(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
 	}
 
-	if (myDataCacheMissed == 1) {
+	if (myDataCacheMissed != 0) {
 		CYCLE_STALL_DATA_CACHE = 50;
 	}
 
@@ -506,8 +506,8 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER) {
 			}
 		}
 	} else if (CYCLE_STALL_DATA_CACHE == 1) {
-
 		CYCLE_STALL_DATA_CACHE--;
+		update_data_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
 	} else {
 		CYCLE_STALL_DATA_CACHE--;
 	}
