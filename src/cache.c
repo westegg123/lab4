@@ -297,6 +297,7 @@ void update_data_cache(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr) {
 		if (myBlockOffset >= 29) {
 			if (mySetIndex == 255) {
 				mySetIndex = 0;
+				myTag += 1;
 			} else {
 				mySetIndex += 1;
 			}
@@ -327,6 +328,7 @@ int check_data_in_cache_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAdd
 	if (myBlockOffset >= 29) {
 		if (mySetIndex == 255) {
 			mySetIndex = 0;
+			myTag += 1;
 		} else {
 			mySetIndex += 1;
 		}
@@ -361,6 +363,7 @@ uint32_t get_specific_data_from_block_DC(cache_t *aDataCache, /*uint64_t addr */
 		if (myBlockOffset >= 29) {
 			if (mySetIndex == 255) {
 				mySetIndex = 0;
+				myTag += 1;
 			} else {
 				mySetIndex += 1;
 			}
@@ -393,6 +396,7 @@ uint32_t get_data_from_DC(cache_t *aDataCache, /*uint64_t addr */ uint32_t aAddr
 		int myOtherSetIndex = mySetIndex;
 		if (myOtherSetIndex == 255) {
 			myOtherSetIndex = 0;
+			myTag += 1;
 		} else {
 			myOtherSetIndex += 1;
 		}
