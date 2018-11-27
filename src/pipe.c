@@ -73,8 +73,6 @@ int CACHE_VERBOSE = 1;
 #define INVALID 0
 /************************************ END OF CONSTANTS ************************************/
 
-
-
 /************************************ HELPERS ************************************/
 
 // This function prints the cache behavior
@@ -209,6 +207,11 @@ int hazard_detection_unit(uint32_t depend_instruct, uint32_t ind_instruct) {
 }
 
 int forward(uint32_t depend_instruct, uint32_t ind_instruct) {
+	if (depend_instruct == 0 || ind_instruct == 0) {
+		return 0;
+	}
+
+
 	parsed_instruction_holder depend_holder = get_holder(depend_instruct);
 	parsed_instruction_holder ind_holder = get_holder(ind_instruct);
 
@@ -224,7 +227,7 @@ int forward(uint32_t depend_instruct, uint32_t ind_instruct) {
 		uint32_t ind_target = ind_holder.Rd;
 		if (ind_holder.format == 3) {
 			ind_target = ind_holder.Rt;
-		} else if (ind_holder.format == 5 || ind_holder.format == 4) {
+		} else if (ind_holder.format == 4 || ind_holder.format == 5) {
 			return 0;
 		}
 
@@ -240,6 +243,7 @@ int forward(uint32_t depend_instruct, uint32_t ind_instruct) {
 				depend_holder.opcode == BR) {
 				return 0;
 			} 
+
 			if (ind_target == depend_holder.Rm) {
 				return 2;
 			}
@@ -263,7 +267,7 @@ void set_settings_pred_miss (uint32_t aActualNextInstructionPC) {
 				get_instruction_cache_tag(aActualNextInstructionPC)) || 
 			(get_instruction_cache_set_index(CURRENT_STATE.PC) 
 				!= get_instruction_cache_set_index(aActualNextInstructionPC))) {
-			CYCLE_STALL_INSTRUCT_CACHE == 0;
+			CYCLE_STALL_INSTRUCT_CACHE = 0;
 		} 
 	}
 
@@ -544,8 +548,9 @@ void pipe_stage_wb() {
 		WRITE_TO = INSTRUCTION_HOLDER.Rd;
 	}
 
+
 	if ((WRITE_TO != -1) && (WRITE_TO != 31)) {
-		if (INSTRUCTION_HOLDER.format != 3) { 
+		if (INSTRUCTION_HOLDER.format != 3) {
 			CURRENT_STATE.REGS[WRITE_TO] = CURRENT_REGS.MEM_WB.ALU_result;
 		} else {
 			CURRENT_STATE.REGS[WRITE_TO] = CURRENT_REGS.MEM_WB.fetched_data;
@@ -663,6 +668,7 @@ void pipe_stage_execute() {
 		return;
 	} else if (CURRENT_REGS.ID_EX.instruction == HLT) {
 		clear_EX_MEM_REGS();
+		CURRENT_STATE.PC = CURRENT_REGS.ID_EX.PC + 8;
 		CURRENT_REGS.EX_MEM.instruction = CURRENT_REGS.ID_EX.instruction;
 		return;
 	}
@@ -680,6 +686,8 @@ void pipe_stage_execute() {
 
 	int MEM_forward = forward(CURRENT_REGS.ID_EX.instruction, CURRENT_REGS.EX_MEM.instruction);
 	int WB_forward = forward(CURRENT_REGS.ID_EX.instruction, START_REGS.MEM_WB.instruction);
+
+	//printf("This is the Mem Forward Result: %d, WB Forward: %d\n", MEM_forward, WB_forward);
 
 	forward_data(HOLDER, MEM_forward, CURRENT_REGS.EX_MEM.ALU_result);
 
@@ -814,8 +822,12 @@ void pipe_stage_decode() {
 	} else if (CURRENT_REGS.IF_ID.instruction == HLT) {
 		clear_ID_EX_REGS();
 		CURRENT_REGS.ID_EX.instruction = CURRENT_REGS.IF_ID.instruction;
-		FETCH_MORE = 0;
-		CURRENT_STATE.PC = CURRENT_REGS.IF_ID.PC + 8;
+		CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
+		FETCH_MORE = 2;
+		
+		//FETCH_MORE = 0;
+		//CURRENT_STATE.PC = CURRENT_REGS.IF_ID.PC + 8;
+		
 		clear_IF_ID_REGS();
 		return;
 	}
@@ -906,7 +918,12 @@ void pipe_stage_fetch() {
 		}
 
 		bp_predict();
+
+		if (FETCH_MORE == 2) {
+			FETCH_MORE = 0;
+		}
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
+		printf("Are you here: %d\n", CYCLE_STALL_INSTRUCT_CACHE);
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
 		}
