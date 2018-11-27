@@ -446,3 +446,93 @@ void empty_data_cache(cache_t *aDataCache) {
 		}
 	}
 }
+
+/******** new general functions *********/
+
+// This function just tells you what the data in the cache is
+int check_data_in_cache(cache_t *aCache, /*uint64_t addr */ uint64_t aAddr) {
+	int myBlockOffset = 0;
+	int mySetIndex = 0;
+	uint64_t myTag = 0;
+
+	if (aCache->aSet == 64) {
+		myBlockOffset = get_instruction_cache_block_offset(aAddr);
+		mySetIndex = get_instruction_cache_set_index(aAddr);
+		myTag = get_instruction_cache_tag(aAddr);
+	} else if (aCache->aSet == 256) {
+		myBlockOffset = get_data_cache_block_offset(aAddr);
+		mySetIndex = get_data_cache_set_index(aAddr);
+		myTag = get_data_cache_tag(aAddr);
+	}
+
+	cache_set_t *myCacheSet = &(aCache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aCache->ways);
+
+	if (myCacheBlock == NULL) {
+		return 1;
+	}
+
+	if (myBlockOffset >= 29) {
+		mySetIndex = get_next_set(mySetIndex);
+		if (mySetIndex == 0) {
+			myTag += 1;
+		}
+
+		myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
+		myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
+
+		if (myCacheBlock == NULL){
+			return 2;
+		}
+	}
+	return 0;
+}
+
+
+void update_cache(cache_t *Cache, /*uint64_t addr */ uint64_t aAddr) {
+	int myBlockOffset = 0;
+	int mySetIndex = 0;
+	uint64_t myTag = 0;
+	int myCacheType = 0; // 1 for Instruction, 2 for Data
+
+	if (aCache->aSet == 64) {
+		myBlockOffset = get_instruction_cache_block_offset(aAddr);
+		mySetIndex = get_instruction_cache_set_index(aAddr);
+		myTag = get_instruction_cache_tag(aAddr);
+		myCacheType = 1;
+	} else if (aCache->aSet == 256) {
+		myBlockOffset = get_data_cache_block_offset(aAddr);
+		mySetIndex = get_data_cache_set_index(aAddr);
+		myTag = get_data_cache_tag(aAddr);
+		myCacheType = 2;
+	}
+
+	cache_set_t *myCacheSet = &(Cache->cache_sets[mySetIndex]);
+	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, Cache->ways);
+
+	if (myCacheBlock == NULL) {
+		if (myCacheType == 1) {
+			load_cache_block_IC(myCacheSet, Cache->ways, aAddr);
+		} else if (myCacheType == 2) {
+			load_cache_block_DC(myCacheSet, Cache->ways, aAddr);
+		}
+	} else {
+		if (myBlockOffset >= 29) {
+			mySetIndex = get_next_set(mySetIndex);
+			if (mySetIndex == 0) {
+				myTag += 1;
+			}
+
+			myCacheSet = &(Cache->cache_sets[mySetIndex]);
+			myCacheBlock = get_tag_match(myCacheSet, myTag, Cache->ways);
+
+			if (myCacheBlock == NULL){
+				if (myCacheType == 1) {
+					load_cache_block_IC(myCacheSet, Cache->ways, get_OriginAddr_IC(myTag, mySetIndex));
+				} else if (myCacheType == 2) {
+					load_cache_block_DC(myCacheSet, Cache->ways, get_OriginAddr_DC(myTag, mySetIndex));
+				}
+			}
+		}
+	}
+}
