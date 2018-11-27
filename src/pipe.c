@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 0;
+int VERBOSE = 1;
 int CACHE_VERBOSE = 1;
 
 /************************************ CONSTANTS ************************************/
@@ -668,6 +668,7 @@ void pipe_stage_execute() {
 		return;
 	} else if (CURRENT_REGS.ID_EX.instruction == HLT) {
 		clear_EX_MEM_REGS();
+		FETCH_MORE = 0;
 		CURRENT_STATE.PC = CURRENT_REGS.ID_EX.PC + 8;
 		CURRENT_REGS.EX_MEM.instruction = CURRENT_REGS.ID_EX.instruction;
 		return;
@@ -823,7 +824,7 @@ void pipe_stage_decode() {
 		clear_ID_EX_REGS();
 		CURRENT_REGS.ID_EX.instruction = CURRENT_REGS.IF_ID.instruction;
 		CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
-		FETCH_MORE = 2;
+		//FETCH_MORE = 2;
 		
 		//FETCH_MORE = 0;
 		//CURRENT_STATE.PC = CURRENT_REGS.IF_ID.PC + 8;
@@ -884,12 +885,12 @@ void pipe_stage_fetch() {
 	if (CYCLE_STALL_DATA_CACHE != 0) {
 		return;
 	}
-
 	
 	if (BUBBLE != 0) {
 		if (VERBOSE) {
 			printf("BUBBLE\n");
 		}
+		printf("BUBBLE\n");
 		// printf("BUBBLE. PC: %lx\n", CURRENT_STATE.PC);
 		return;
 	}
@@ -919,11 +920,10 @@ void pipe_stage_fetch() {
 
 		bp_predict();
 
-		if (FETCH_MORE == 2) {
-			FETCH_MORE = 0;
-		}
+		// if (FETCH_MORE == 2) {
+		// 	FETCH_MORE = 0;
+		// }
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
-		printf("Are you here: %d\n", CYCLE_STALL_INSTRUCT_CACHE);
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
 		}
