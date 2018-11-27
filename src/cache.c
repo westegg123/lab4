@@ -465,13 +465,8 @@ void empty_data_cache(cache_t *aDataCache) {
 // 	int offset = 0;
 // 	uint64_t myOriginAddr = get_OriginAddr_DC(aTag, aSet);
 	
-// 	if (myTargetBlock->dirty_bit == 1) {
-// 		write_back_block_to_mem(myTargetBlock, myOriginAddr);
-// 	}
-
-// 	for (int i = 0; i < 8; i++) {
-// 		(myTargetBlock->written_data)[i] = mem_read_32(myOriginAddr + offset);
-// 		offset += 4;
+// 	if (aCacheBlock->dirty_bit == 1) {
+// 		write_back_block_to_mem(aCacheBlock, myOriginAddr);
 // 	}
 
 // 	for (int i = 0; i < 8; i++) {
@@ -676,7 +671,7 @@ void write_to_cache(cache_t *Cache, uint64_t aAddr, uint32_t aData) {
 		} else {
 			myBlockOffset += 1;
 		}
-		
+
 		myNewData = get_instruction_segment(myRemainder*8, 31, get_specific_data_from_block(myCacheBlock, myBlockOffset));
 		append = get_instruction_segment(myRemainder*8, 31, aData);
 
