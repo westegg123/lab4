@@ -793,7 +793,7 @@ void pipe_stage_decode() {
 	if (BUBBLE != 0) {
 		return;
 	}
-	printf("CYCLE_STALL_DATA_CACHE: %d\n", CYCLE_STALL_DATA_CACHE);
+
 	if (CYCLE_STALL_DATA_CACHE != 0) {
 		return;
 	}
@@ -888,7 +888,6 @@ void pipe_stage_fetch() {
 
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		clear_IF_ID_REGS();
-		//CURRENT_REGS.IF_ID.instruction = mem_read_32(CURRENT_STATE.PC);
 		CURRENT_REGS.IF_ID.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 		CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
 		CURRENT_REGS.IF_ID.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
@@ -897,13 +896,8 @@ void pipe_stage_fetch() {
 		if (VERBOSE) {
 			print_operation(CURRENT_REGS.IF_ID.instruction);
 		}
-		print_operation(CURRENT_REGS.IF_ID.instruction);
-		CURRENT_STATE.PC += 4;
-	
-		if (CURRENT_REGS.IF_ID.instruction == HLT) {
-			RUN_BIT = 0;
-		}
-		//bp_predict();
+
+		bp_predict();
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
