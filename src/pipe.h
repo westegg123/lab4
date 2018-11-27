@@ -42,7 +42,7 @@ typedef struct EX_MEM_REGS {
 } EX_MEM_REGS;
 
 typedef struct MEM_WB_REGS {
-	uint64_t instruction, fetched_data, ALU_result;
+	uint64_t instruction, fetched_data, ALU_result, data_to_write;
 } MEM_WB_REGS;
 
 typedef struct Pipeline_Regs {
