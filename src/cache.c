@@ -26,7 +26,6 @@ cache_t *cache_new(int aSets, int aWays, int aBlock) {
 		myCacheSets[i].cache_blocks = calloc(aWays, sizeof(cache_block_t));
 		for (int j = 0; j < aWays; j++) {
 			myCacheSets[i].cache_blocks[j].written_data = calloc(8, sizeof(uint32_t));
-			// myCacheSets[i].cache_blocks[j].written_data = calloc(32, sizeof(uint32_t));
 			myCacheSets[i].cache_blocks[j].last_used_iteration = 0;
 			myCacheSets[i].cache_blocks[j].tag = -1;
 			myCacheSets[i].cache_blocks[j].dirty_bit = 0;
@@ -85,10 +84,6 @@ uint32_t get_specific_data_from_block(cache_block_t *aCacheBlock, int aBlockOffs
 
 void write_specific_data_to_block(cache_block_t *aCacheBlock, int aBlockOffset, uint32_t data) {
 	(aCacheBlock->written_data)[aBlockOffset] = data;
-}
-
-uint32_t append_4_bytes(uint32_t byte1, uint32_t byte2, uint32_t byte3, uint32_t byte4) {
-	return ((byte1) | (byte1 << 8) | (byte1 << 16) | (byte1 << 24));
 }
 
 // This function gives you the value of the new set
@@ -192,14 +187,6 @@ void load_cache_block_IC(cache_block_t *aCacheBlock, uint64_t aTag, uint32_t aSe
 		(aCacheBlock->written_data)[i] = mem_read_32(myOriginAddr + offset);
 		offset += 4;
 	}
-
-	// for (int i = 0; i < 32; i+=4) {
-	// 	uint32_t data = mem_read_32(myOriginAddr + i);
-	// 	(aCacheBlock->written_data)[i] = get_instruction_segment(0, 7, data);
-	// 	(aCacheBlock->written_data)[(i+1)] = get_instruction_segment(8, 15, data);
-	// 	(aCacheBlock->written_data)[(i+2)] = get_instruction_segment(16, 23, data);
-	// 	(aCacheBlock->written_data)[(i+3)] = get_instruction_segment(24, 31, data);
-	// }
 }
 
 // int cache_update(cache_t *aInstructionCache, /*uint64_t addr */ uint32_t aAddr) {
@@ -250,9 +237,16 @@ int check_data_in_cache_IC(cache_t *aDataCache, /*uint64_t addr */ uint64_t aAdd
 	int mySetIndex = get_instruction_cache_set_index(aAddr);
 	uint64_t myTag = get_instruction_cache_tag(aAddr);
 
+	//printf("This is the set: %x and Tag: %x and offset: %x\n", mySetIndex, myTag, myBlockOffset);
+
 	cache_set_t *myCacheSet = &(aDataCache->cache_sets[mySetIndex]);
 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
-	return ((myCacheBlock == NULL) ? 1 : 0);
+
+	if (myCacheBlock == NULL) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 uint32_t get_instruct_from_IC(cache_t *aInstructionCache, /*uint64_t addr */ uint64_t aAddr) {
@@ -302,14 +296,6 @@ cache_block_t *load_cache_block_DC(cache_set_t *aCacheSet, int aWays, uint64_t a
 		(myTargetBlock->written_data)[i] = mem_read_32(myOriginAddr + offset);
 		offset += 4;
 	}
-
-	// for (int i = 0; i < 32; i+=4) {
-	// 	uint32_t data = mem_read_32(myOriginAddr + i);
-	// 	(myTargetBlock->written_data)[i] = get_instruction_segment(0, 7, data);
-	// 	(myTargetBlock->written_data)[(i+1)] = get_instruction_segment(8, 15, data);
-	// 	(myTargetBlock->written_data)[(i+2)] = get_instruction_segment(16, 23, data);
-	// 	(myTargetBlock->written_data)[(i+3)] = get_instruction_segment(24, 31, data);
-	// }
 
 	myTargetBlock->tag = myTag;
 	myTargetBlock->last_used_iteration = stat_cycles;
@@ -383,6 +369,7 @@ uint32_t get_specific_data_from_block_DC(cache_t *aDataCache, /*uint64_t addr */
 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aDataCache->ways);
 
 	if ((myBlockOffset % 4) == 0) {
+		myBlockOffset = myBlockOffset / 4;
 		data = get_specific_data_from_block(myCacheBlock, myBlockOffset);
 	} else {
 		uint32_t append = 0;
@@ -424,8 +411,7 @@ uint32_t get_data_from_DC(cache_t *aDataCache, /*uint64_t addr */ uint64_t aAddr
 	}
 
 	myCacheBlock->last_used_iteration = stat_cycles;
-	
-	return get_specific_data_from_block_DC(aDataCache, myBlockOffset);
+	return get_specific_data_from_block_DC(aDataCache, aAddr);
 }
 
 void write_data_to_DC(cache_t *aDataCache, /*uint64_t addr */ uint64_t aAddr, uint32_t data) {
@@ -441,7 +427,6 @@ void write_data_to_DC(cache_t *aDataCache, /*uint64_t addr */ uint64_t aAddr, ui
 		update_data_cache(aDataCache, aAddr);
 	}
 	write_specific_data_to_block(myCacheBlock, myBlockOffset, data);
-
 	myCacheBlock->last_used_iteration = stat_cycles;
 	myCacheBlock->dirty_bit = 1;
 }
