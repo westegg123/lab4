@@ -257,7 +257,16 @@ int forward(uint32_t depend_instruct, uint32_t ind_instruct) {
 
 void set_settings_pred_miss (uint32_t aActualNextInstructionPC) {
 	BUBBLE = 1;
-	CYCLE_STALL_INSTRUCT_CACHE = 0;
+	
+	if (CYCLE_STALL_INSTRUCT_CACHE != 0) {
+		if ((get_instruction_cache_tag(CURRENT_STATE.PC) != 
+				get_instruction_cache_tag(aActualNextInstructionPC)) || 
+			(get_instruction_cache_set_index(CURRENT_STATE.PC) 
+				!= get_instruction_cache_set_index(aActualNextInstructionPC))) {
+			CYCLE_STALL_INSTRUCT_CACHE == 0;
+		} 
+	}
+
 	CURRENT_STATE.PC = aActualNextInstructionPC;
 	clear_IF_ID_REGS();
 	clear_ID_EX_REGS();
@@ -883,9 +892,8 @@ void pipe_stage_fetch() {
 		// stall 50 cycles
 		CYCLE_STALL_INSTRUCT_CACHE = 50;
 	}
-	print_cache_behavior(1);
-	
 
+	print_cache_behavior(1);
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		clear_IF_ID_REGS();
 		CURRENT_REGS.IF_ID.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
@@ -901,6 +909,9 @@ void pipe_stage_fetch() {
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
+		}
+		if (VERBOSE) {
+			printf("\n");
 		}
 	} else {
 		if (VERBOSE) {

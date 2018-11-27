@@ -34,8 +34,13 @@ cache_t *instruction_cache_new();
 cache_t *data_cache_new();
 void cache_destroy(cache_t *c);
 void print_cache();
-int get_data_cache_set_index(uint64_t aData);
-uint64_t get_data_cache_tag(uint64_t aData);
+
+int get_instruction_cache_set_index(uint32_t aInstruction);
+uint64_t get_instruction_cache_tag(uint32_t aInstruction);
+
+
+// Origin address functions
+uint64_t get_OriginAddr_IC(uint64_t aTag, int aSetIndex);
 uint64_t get_OriginAddr_DC(uint64_t aTag, int aSetIndex);
 
 // CACHING FUNCTIONS
