@@ -38,18 +38,12 @@ int get_data_cache_set_index(uint64_t aData);
 uint64_t get_data_cache_tag(uint64_t aData);
 uint64_t get_OriginAddr_DC(uint64_t aTag, int aSetIndex);
 
+// CACHING FUNCTIONS
+void cache_update(cache_t *c, uint64_t aAddr);
+int check_data_in_cache(cache_t *c, uint64_t aAddr);
+uint32_t read_cache(cache_t *c, uint64_t aAddr);
+void write_to_cache(cache_t *c, uint64_t aAddr, uint32_t data);
 
-// INSTRUCTION CACHE FUNCTIONS
-int cache_update(cache_t *c, uint64_t aAddr);
-int check_data_in_cache_IC(cache_t *c, uint64_t aAddr);
-uint32_t get_instruct_from_IC(cache_t *c, uint64_t aAddr);
-
-// DATA CACHE FUNCTIONS
-void update_data_cache(cache_t *c, uint64_t aAddr);
-int check_data_in_cache_DC(cache_t *c, uint64_t aAddr);
-uint32_t get_data_from_DC(cache_t *c, uint64_t aAddr);
-void write_data_to_DC(cache_t *c, uint64_t aAddr, uint32_t data);
-void empty_data_cache(cache_t* c);
 
 
 #endif

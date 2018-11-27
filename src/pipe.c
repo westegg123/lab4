@@ -32,8 +32,8 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 1;
-int CACHE_VERBOSE = 0;
+int VERBOSE = 0;
+int CACHE_VERBOSE = 1;
 
 /************************************ CONSTANTS ************************************/
 /* 
@@ -546,8 +546,8 @@ void pipe_stage_wb() {
 }
 
 uint64_t mem_read_64_DC(uint64_t aAddr) {
-	uint64_t bit31_0 = get_data_from_DC(theDataCache, aAddr);
-	uint64_t bit63_32 = get_data_from_DC(theDataCache, aAddr + 4);
+	uint64_t bit31_0 = read_cache(theDataCache, aAddr);
+	uint64_t bit63_32 = read_cache(theDataCache, aAddr + 4);
 	return ((bit63_32 << 32) | bit63_32);
 }
 
@@ -557,14 +557,14 @@ void mem_write_64_DC(uint64_t aAddr, uint64_t aValue) {
 	uint32_t b1 = bit31_0;
 	uint32_t b2 = bit63_32;
 
-	write_data_to_DC(theDataCache, aAddr, b1);
-	write_data_to_DC(theDataCache, (aAddr + 4), b2);
+	write_to_cache(theDataCache, aAddr, b1);
+	write_to_cache(theDataCache, (aAddr + 4), b2);
 }
 
 void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER) {
 	int myDataCacheMissed = 0;
 	if (CYCLE_STALL_DATA_CACHE == 0) {
-		myDataCacheMissed = check_data_in_cache_DC(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
+		myDataCacheMissed = check_data_in_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
 	}
 
 	if (myDataCacheMissed != 0) {
@@ -577,27 +577,27 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER) {
 			CURRENT_REGS.MEM_WB.fetched_data = 
 				mem_read_64_DC(CURRENT_REGS.EX_MEM.ALU_result);
 		} else if (INSTRUCTION_HOLDER.opcode == 0x5C2) {
-			CURRENT_REGS.MEM_WB.fetched_data = get_data_from_DC(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
+			CURRENT_REGS.MEM_WB.fetched_data = read_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
 		} else if (INSTRUCTION_HOLDER.opcode == 0x1C2 ) {
 			CURRENT_REGS.MEM_WB.fetched_data = 
-				get_memory_segment(0,7,get_data_from_DC(theDataCache, CURRENT_REGS.EX_MEM.ALU_result));
+				get_memory_segment(0,7,read_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result));
 		
 
 		} else if (INSTRUCTION_HOLDER.opcode == 0x3C2) {
 			CURRENT_REGS.MEM_WB.fetched_data = 
-				get_memory_segment(0,15, get_data_from_DC(theDataCache, CURRENT_REGS.EX_MEM.ALU_result));
+				get_memory_segment(0,15, read_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result));
 		
 
 		} else /* store */{
 			if (INSTRUCTION_HOLDER.opcode != STUR) {
-				write_data_to_DC(theDataCache, CURRENT_REGS.EX_MEM.ALU_result, CURRENT_REGS.EX_MEM.data_to_write);
+				write_to_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result, CURRENT_REGS.EX_MEM.data_to_write);
 			} else {
 				mem_write_64_DC(CURRENT_REGS.EX_MEM.ALU_result, CURRENT_REGS.EX_MEM.data_to_write);
 			}
 		}
 	} else {
 		if (CYCLE_STALL_DATA_CACHE == 1) {
-			update_data_cache(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
+			cache_update(theDataCache, CURRENT_REGS.EX_MEM.ALU_result);
 		}
 	}
 }
@@ -860,15 +860,11 @@ void pipe_stage_fetch() {
 		printf("Fetch -----------> ");
 	}
 	
-	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50) {
-		STALL_FETCH = 1;
+	if (CYCLE_STALL_DATA_CACHE != 0) {
 		return;
 	}
 
-	if (STALL_FETCH == 1) {
-		STALL_FETCH = 0;
-		return;
-	}
+	
 	if (BUBBLE != 0) {
 		if (VERBOSE) {
 			printf("BUBBLE\n");
@@ -880,7 +876,7 @@ void pipe_stage_fetch() {
 
 	int myInstructionCacheMissed = 0;
 	if (CYCLE_STALL_INSTRUCT_CACHE == 0) {
-		myInstructionCacheMissed = check_data_in_cache_IC(theInstructionCache, CURRENT_STATE.PC);
+		myInstructionCacheMissed = check_data_in_cache(theInstructionCache, CURRENT_STATE.PC);
 	}
 	// print_cache(theInstructionCache);
 	if (myInstructionCacheMissed == 1) {
@@ -893,7 +889,7 @@ void pipe_stage_fetch() {
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		clear_IF_ID_REGS();
 		//CURRENT_REGS.IF_ID.instruction = mem_read_32(CURRENT_STATE.PC);
-		CURRENT_REGS.IF_ID.instruction = get_instruct_from_IC(theInstructionCache, CURRENT_STATE.PC);
+		CURRENT_REGS.IF_ID.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 		CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
 		CURRENT_REGS.IF_ID.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
 		CURRENT_REGS.IF_ID.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
@@ -901,8 +897,13 @@ void pipe_stage_fetch() {
 		if (VERBOSE) {
 			print_operation(CURRENT_REGS.IF_ID.instruction);
 		}
-
-		bp_predict();
+		print_operation(CURRENT_REGS.IF_ID.instruction);
+		CURRENT_STATE.PC += 4;
+	
+		if (CURRENT_REGS.IF_ID.instruction == HLT) {
+			RUN_BIT = 0;
+		}
+		//bp_predict();
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
