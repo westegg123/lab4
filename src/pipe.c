@@ -620,15 +620,10 @@ void pipe_stage_wb() {
 			(INSTRUCTION_HOLDER.opcode == LDURH) || (INSTRUCTION_HOLDER.opcode == LDURB)) {
 			WRITE_TO = INSTRUCTION_HOLDER.Rt;
 		}
-<<<<<<< HEAD
 	} else if (INSTRUCTION_HOLDER.format == 4 || INSTRUCTION_HOLDER.format == 5) {
 		// if (!CYCLE_STALL_DATA_CACHE) {
 		// 	handle_load_stur(INSTRUCTION_HOLDER, CURRENT_REGS.MEM_WB.ALU_result, CURRENT_REGS.MEM_WB.data_to_write);
 		// }                 
-			
-=======
-	} else if (INSTRUCTION_HOLDER.format == 4 || INSTRUCTION_HOLDER.format == 5) {	
->>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 	} else if (INSTRUCTION_HOLDER.format == 6) {
 		WRITE_TO = INSTRUCTION_HOLDER.Rd;
 	}
@@ -734,11 +729,7 @@ void pipe_stage_execute() {
 		forward_data(HOLDER, bubble_result, CURRENT_REGS.MEM_WB.fetched_data);
 	}
 
-<<<<<<< HEAD
 	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
-=======
-	if (CYCLE_STALL_DATA_CACHE != 0) {
->>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 		return;
 	}
 
@@ -850,11 +841,7 @@ void pipe_stage_decode() {
 		return;
 	}
 
-<<<<<<< HEAD
 	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
-=======
-	if (CYCLE_STALL_DATA_CACHE != 0) {
->>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 		return;
 	}
 
@@ -919,13 +906,7 @@ void pipe_stage_fetch() {
 	if (VERBOSE) {
 		printf("Fetch -----------> ");
 	}
-<<<<<<< HEAD
-	
 	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
-=======
-
-	if (CYCLE_STALL_DATA_CACHE != 0) {
->>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 		return;
 	}
 	
