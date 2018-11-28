@@ -608,9 +608,9 @@ void pipe_stage_wb() {
 			WRITE_TO = INSTRUCTION_HOLDER.Rt;
 		}
 	} else if (INSTRUCTION_HOLDER.format == 4 || INSTRUCTION_HOLDER.format == 5) {
-		if (!CYCLE_STALL_DATA_CACHE) {
-			handle_load_stur(INSTRUCTION_HOLDER, CURRENT_REGS.MEM_WB.ALU_result, CURRENT_REGS.MEM_WB.data_to_write);
-		}                 
+		// if (!CYCLE_STALL_DATA_CACHE) {
+		// 	handle_load_stur(INSTRUCTION_HOLDER, CURRENT_REGS.MEM_WB.ALU_result, CURRENT_REGS.MEM_WB.data_to_write);
+		// }                 
 			
 	} else if (INSTRUCTION_HOLDER.format == 6) {
 		WRITE_TO = INSTRUCTION_HOLDER.Rd;
@@ -714,7 +714,7 @@ void pipe_stage_execute() {
 		forward_data(HOLDER, bubble_result, CURRENT_REGS.MEM_WB.fetched_data);
 	}
 
-	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50) {
+	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
 		return;
 	}
 
@@ -825,7 +825,7 @@ void pipe_stage_decode() {
 		return;
 	}
 
-	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50) {
+	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
 		return;
 	}
 
@@ -895,7 +895,7 @@ void pipe_stage_fetch() {
 		printf("Fetch -----------> ");
 	}
 	
-	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50) {
+	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
 		return;
 	}
 	
