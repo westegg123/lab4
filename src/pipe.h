@@ -24,7 +24,7 @@ typedef struct CPU_State {
 	
 } CPU_State;
 
-// PIPELINE REGISTER STRUCTS
+// PIPELINE REGISTER
 typedef struct IF_ID_REGS {
 	uint64_t PC, instruction;
 	BTB_entry_t accessed_entry;
@@ -46,6 +46,7 @@ typedef struct MEM_WB_REGS {
 } MEM_WB_REGS;
 
 typedef struct Pipeline_Regs {
+	IF_ID_REGS IF_ID_RESERVOIR;
 	IF_ID_REGS IF_ID;
 	ID_EX_REGS ID_EX;
 	EX_MEM_REGS EX_MEM;
