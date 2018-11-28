@@ -31,6 +31,10 @@ int STALL_FETCH = 0;
 cache_t *theInstructionCache;
 cache_t *theDataCache;
 
+/************************ TRACK INSTRUCTIONS ******************************/
+uint32_t WB_INSTRUCTION = 0, MEM_INSTRUCTION = 0, EX_INSTRUCTION, ID_INSTRUCTION = 0, IF_INSTRUCTION = 0;
+
+
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
 int VERBOSE = 0;
 int CACHE_VERBOSE = 1;
@@ -110,6 +114,13 @@ void print_cache_behavior(int flag) {
 	}
 }
 
+int can_run(uint32_t aNextStageInstruction) {
+	if (aNextStageInstruction == 0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
 
 void reset_bubble() {
 	BUBBLE = 0;
@@ -569,6 +580,8 @@ void pipe_stage_wb() {
 		printf("\nWrite BACK -----------> ");
 		print_operation(CURRENT_REGS.MEM_WB.instruction);
 	}
+
+	WB_INSTRUCTION = CURRENT_REGS.MEM_WB.instruction;
 	
 	if (CURRENT_REGS.MEM_WB.instruction == 0) {
 		return;
@@ -607,11 +620,15 @@ void pipe_stage_wb() {
 			(INSTRUCTION_HOLDER.opcode == LDURH) || (INSTRUCTION_HOLDER.opcode == LDURB)) {
 			WRITE_TO = INSTRUCTION_HOLDER.Rt;
 		}
+<<<<<<< HEAD
 	} else if (INSTRUCTION_HOLDER.format == 4 || INSTRUCTION_HOLDER.format == 5) {
 		// if (!CYCLE_STALL_DATA_CACHE) {
 		// 	handle_load_stur(INSTRUCTION_HOLDER, CURRENT_REGS.MEM_WB.ALU_result, CURRENT_REGS.MEM_WB.data_to_write);
 		// }                 
 			
+=======
+	} else if (INSTRUCTION_HOLDER.format == 4 || INSTRUCTION_HOLDER.format == 5) {	
+>>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 	} else if (INSTRUCTION_HOLDER.format == 6) {
 		WRITE_TO = INSTRUCTION_HOLDER.Rd;
 	}
@@ -633,6 +650,8 @@ void pipe_stage_mem() {
 		printf("Memory -----------> ");
 		print_operation(CURRENT_REGS.EX_MEM.instruction);
 	}
+
+	MEM_INSTRUCTION = CURRENT_REGS.EX_MEM.instruction;
 
 	if (CURRENT_REGS.EX_MEM.instruction == 0) {
 		//printf("Memmeory Stage Skipped\n");
@@ -674,6 +693,7 @@ void pipe_stage_execute() {
 	}
 	
 	// printf("PC OF INSTRUCTION TO EXECUTE: %lx. PC OF NEXT INSTRUCTION: %lx\n", CURRENT_REGS.ID_EX.PC, CURRENT_REGS.IF_ID.PC);
+	EX_INSTRUCTION = CURRENT_REGS.ID_EX.instruction;
 
 
 	if (CURRENT_REGS.ID_EX.instruction == 0) {
@@ -714,7 +734,11 @@ void pipe_stage_execute() {
 		forward_data(HOLDER, bubble_result, CURRENT_REGS.MEM_WB.fetched_data);
 	}
 
+<<<<<<< HEAD
 	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
+=======
+	if (CYCLE_STALL_DATA_CACHE != 0) {
+>>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 		return;
 	}
 
@@ -820,12 +844,17 @@ void pipe_stage_decode() {
 		print_operation(CURRENT_REGS.IF_ID.instruction);
 	}
 
+	ID_INSTRUCTION = CURRENT_REGS.IF_ID.instruction;
 	
 	if (BUBBLE != 0) {
 		return;
 	}
 
+<<<<<<< HEAD
 	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
+=======
+	if (CYCLE_STALL_DATA_CACHE != 0) {
+>>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 		return;
 	}
 
@@ -837,11 +866,7 @@ void pipe_stage_decode() {
 		clear_ID_EX_REGS();
 		CURRENT_REGS.ID_EX.instruction = CURRENT_REGS.IF_ID.instruction;
 		CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
-		//FETCH_MORE = 2;
-		
 		//FETCH_MORE = 0;
-		//CURRENT_STATE.PC = CURRENT_REGS.IF_ID.PC + 8;
-		
 		clear_IF_ID_REGS();
 		return;
 	}
@@ -894,8 +919,13 @@ void pipe_stage_fetch() {
 	if (VERBOSE) {
 		printf("Fetch -----------> ");
 	}
+<<<<<<< HEAD
 	
 	if (CYCLE_STALL_DATA_CACHE != 0 /*&& CYCLE_STALL_DATA_CACHE != 50*/) {
+=======
+
+	if (CYCLE_STALL_DATA_CACHE != 0) {
+>>>>>>> 9c006e927e52892434d32f92478a3ebc6056ff16
 		return;
 	}
 	
@@ -904,6 +934,7 @@ void pipe_stage_fetch() {
 			printf("BUBBLE\n");
 		}
 		printf("BUBBLE\n");
+		IF_INSTRUCTION = 0;
 		// printf("BUBBLE. PC: %lx\n", CURRENT_STATE.PC);
 		return;
 	}
@@ -922,20 +953,24 @@ void pipe_stage_fetch() {
 	print_cache_behavior(1);
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		clear_IF_ID_REGS();
-		CURRENT_REGS.IF_ID.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
-		CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
-		CURRENT_REGS.IF_ID.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
-		CURRENT_REGS.IF_ID.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
+
+		if (IF_INSTRUCTION == 0) {
+			IF_INSTRUCTION = read_cache(theInstructionCache, CURRENT_STATE.PC);
+		}
+
+		if (can_run(ID_INSTRUCTION)) {
+			CURRENT_REGS.IF_ID.instruction = IF_INSTRUCTION;
+			CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
+			CURRENT_REGS.IF_ID.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
+			CURRENT_REGS.IF_ID.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
+			IF_INSTRUCTION = 0;
+		}
 
 		if (VERBOSE) {
 			print_operation(CURRENT_REGS.IF_ID.instruction);
 		}
 
 		bp_predict();
-
-		// if (FETCH_MORE == 2) {
-		// 	FETCH_MORE = 0;
-		// }
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
 		if (!CYCLE_STALL_DATA_CACHE) {
 			clear_IF_ID_REGS();
