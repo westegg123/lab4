@@ -32,8 +32,8 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 0;
-int CACHE_VERBOSE = 1;
+int VERBOSE = 1;
+int CACHE_VERBOSE = 0;
 
 /************************************ CONSTANTS ************************************/
 /* 
@@ -532,7 +532,6 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER, uint64_t aMe
 	if (myDataCacheMissed != 0) {
 		CYCLE_STALL_DATA_CACHE = 50;
 		// TEMPORARY, LOOK FOR WORK AROUND!
-		stat_inst_retire--;
 	}
 	print_cache_behavior(2);
 
@@ -562,11 +561,11 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER, uint64_t aMe
 			cache_update(theDataCache, aMemoryAddr);
 		}
 
-		if (CYCLE_STALL_DATA_CACHE == 50) {
-			CURRENT_REGS.MEM_WB.data_to_write = CURRENT_REGS.EX_MEM.data_to_write;
-			CURRENT_REGS.MEM_WB.ALU_result = CURRENT_REGS.EX_MEM.ALU_result;
-			CURRENT_REGS.MEM_WB.instruction = CURRENT_REGS.EX_MEM.instruction;
-		}
+		// if (CYCLE_STALL_DATA_CACHE == 50) {
+		// 	CURRENT_REGS.MEM_WB.data_to_write = CURRENT_REGS.EX_MEM.data_to_write;
+		// 	CURRENT_REGS.MEM_WB.ALU_result = CURRENT_REGS.EX_MEM.ALU_result;
+		// 	CURRENT_REGS.MEM_WB.instruction = CURRENT_REGS.EX_MEM.instruction;
+		// }
 	}
 }
 
@@ -576,7 +575,7 @@ void pipe_stage_wb() {
 		print_operation(CURRENT_REGS.MEM_WB.instruction);
 	}
 	
-	if (CURRENT_REGS.MEM_WB.instruction == 0 || CYCLE_STALL_DATA_CACHE == 50) {
+	if (CURRENT_REGS.MEM_WB.instruction == 0 || CYCLE_STALL_DATA_CACHE != 0) {
 		return;
 	} else if (CURRENT_REGS.MEM_WB.instruction == HLT) {
 		stat_inst_retire++;
@@ -638,7 +637,9 @@ void pipe_stage_mem() {
 
 	if (CURRENT_REGS.EX_MEM.instruction == 0) {
 		//printf("Memmeory Stage Skipped\n");
-		clear_MEM_WB_REGS();
+		if (CYCLE_STALL_DATA_CACHE == 0) {
+			clear_MEM_WB_REGS();
+		}
 		return;
 	} else if ( CURRENT_REGS.EX_MEM.instruction == HLT) {
 		clear_MEM_WB_REGS();
@@ -679,7 +680,9 @@ void pipe_stage_execute() {
 
 
 	if (CURRENT_REGS.ID_EX.instruction == 0) {
-		clear_EX_MEM_REGS();
+		if (CYCLE_STALL_DATA_CACHE == 0) {
+			clear_EX_MEM_REGS();	
+		}
 		return;
 	} else if (CURRENT_REGS.ID_EX.instruction == HLT) {
 		clear_EX_MEM_REGS();
@@ -744,8 +747,8 @@ void pipe_stage_execute() {
 	uint32_t myPredictedNextInstructionPC = CURRENT_REGS.IF_ID.PC;
 	
 	if (HOLDER.format == 1) {
-		printf("THIS is primary: %d, this is secondary_data_holder: %d\n", CURRENT_REGS.ID_EX.primary_data_holder,
-			CURRENT_REGS.ID_EX.secondary_data_holder);
+		// printf("THIS is primary: %d, this is secondary_data_holder: %d\n", CURRENT_REGS.ID_EX.primary_data_holder,
+		// 	CURRENT_REGS.ID_EX.secondary_data_holder);
 		if (HOLDER.opcode == 0x458 || HOLDER.opcode == 0x459) {
 			handle_add();
 		} else if (HOLDER.opcode == 0x558 || HOLDER.opcode == 0x559) {
@@ -846,10 +849,9 @@ void pipe_stage_decode() {
 		return;
 	}
 
-	if (CYCLE_STALL_DATA_CACHE != 0) {
+	if (CYCLE_STALL_DATA_CACHE != 0  && CURRENT_REGS.ID_EX.instruction != 0) {
 		return;
 	}
-
 	if (CURRENT_REGS.IF_ID.instruction == 0) {
 		//printf("SKIPPING DECODE\n");
 		clear_ID_EX_REGS();
@@ -903,19 +905,23 @@ void pipe_stage_decode() {
 	CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
 	CURRENT_REGS.ID_EX.accessed_entry = CURRENT_REGS.IF_ID.accessed_entry;
 	CURRENT_REGS.ID_EX.PHT_result = CURRENT_REGS.IF_ID.PHT_result;
+	clear_IF_ID_REGS();
 }
 
 void pipe_stage_fetch() {
 	if (VERBOSE) {
 		printf("Fetch -----------> ");
 	}
+	printf("CYCLE STALL INSTRUCT CACHE %d\n", CYCLE_STALL_INSTRUCT_CACHE);
 	print_cache_behavior(1);
 
 	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50 && CURRENT_REGS.IF_ID.instruction != 0) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
+			printf("ASD!!!\n");
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
 		}
-		print_operation(CURRENT_REGS.IF_ID.instruction);
+		printf("SSSSSSSSSSSSSS\n");
+		// print_operation(CURRENT_REGS.IF_ID.instruction);
 		return;
 	}
 	
@@ -949,7 +955,7 @@ void pipe_stage_fetch() {
 			bp_predict();
 		} else {
 			if (CURRENT_REGS.IF_ID_RESERVOIR.PC == 0) /*reservoir empty*/{
-				// printf("NOT USING RESERVOIR REGS!\n");
+				printf("NOT USING RESERVOIR REGS!\n");
 				clear_IF_ID_REGS();
 				CURRENT_REGS.IF_ID.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 				CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
