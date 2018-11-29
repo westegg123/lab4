@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 1;
+int VERBOSE = 0;
 int CACHE_VERBOSE = 0;
 
 /************************************ CONSTANTS ************************************/
@@ -913,7 +913,7 @@ void pipe_stage_fetch() {
 	if (VERBOSE) {
 		printf("Fetch -----------> ");
 	}
-	printf("CYCLE STALL INSTRUCT CACHE %d\n", CYCLE_STALL_INSTRUCT_CACHE);
+	//printf("CYCLE STALL INSTRUCT CACHE %d\n", CYCLE_STALL_INSTRUCT_CACHE);
 	print_cache_behavior(1);
 
 	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50 && CURRENT_REGS.IF_ID.instruction != 0) {
@@ -946,7 +946,7 @@ void pipe_stage_fetch() {
 
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		if (CYCLE_STALL_DATA_CACHE == 50) {
-			printf("SET RESERVOIR REGS!\n");
+			//printf("SET RESERVOIR REGS!\n");
 			CURRENT_REGS.IF_ID_RESERVOIR.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 			CURRENT_REGS.IF_ID_RESERVOIR.PC = CURRENT_STATE.PC;
 			CURRENT_REGS.IF_ID_RESERVOIR.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
@@ -959,7 +959,7 @@ void pipe_stage_fetch() {
 			bp_predict();
 		} else {
 			if (CURRENT_REGS.IF_ID_RESERVOIR.PC == 0) /*reservoir empty*/{
-				printf("NOT USING RESERVOIR REGS!\n");
+				//printf("NOT USING RESERVOIR REGS!\n");
 				clear_IF_ID_REGS();
 				CURRENT_REGS.IF_ID.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 				CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
@@ -968,7 +968,7 @@ void pipe_stage_fetch() {
 
 				bp_predict();
 			} else /*reservoir full */{
-				printf("USING RESERVOIR REGS\n");
+				//printf("USING RESERVOIR REGS\n");
 				CURRENT_REGS.IF_ID.instruction = CURRENT_REGS.IF_ID_RESERVOIR.instruction;
 				CURRENT_REGS.IF_ID.PC = CURRENT_REGS.IF_ID_RESERVOIR.PC;
 				CURRENT_REGS.IF_ID.accessed_entry = CURRENT_REGS.IF_ID_RESERVOIR.accessed_entry;
