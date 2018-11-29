@@ -966,9 +966,6 @@ void pipe_stage_fetch() {
 				CURRENT_REGS.IF_ID.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
 				CURRENT_REGS.IF_ID.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
 
-				if (CURRENT_REGS.IF_ID.instruction == HLT) {
-					RUN_BIT = 0;
-				}
 				bp_predict();
 			} else /*reservoir full */{
 				printf("USING RESERVOIR REGS\n");
