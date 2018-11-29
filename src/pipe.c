@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 1;
+int VERBOSE = 0;
 int CACHE_VERBOSE = 1;
 
 /************************************ CONSTANTS ************************************/
@@ -911,7 +911,7 @@ void pipe_stage_fetch() {
 	}
 	print_cache_behavior(1);
 
-	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50) {
+	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50 && CURRENT_REGS.IF_ID.instruction != 0) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
 		}
