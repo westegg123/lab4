@@ -348,9 +348,10 @@ uint32_t read_cache(cache_t *aCache, uint64_t aAddr) {
 	}
 	myCacheBlock->last_used_iteration = stat_cycles;
 
-	printf("In read cache\n");
-	printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
-	
+	if (aCache->sets == 256) {
+		printf("In read cache\n");
+		printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
+	}
 	if ((myBlockOffset % 4) == 0) {
 		myBlockOffset = myBlockOffset / 4;
 		data = get_specific_data_from_block(myCacheBlock, myBlockOffset);
@@ -414,12 +415,13 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 	
 	printf("In Write to cache\n");
 	printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
-	
+
 	if ((myBlockOffset % 4) == 0) {
 		myBlockOffset = myBlockOffset / 4;
 		write_specific_data_to_block(myCacheBlock, myBlockOffset, aData);
 	} else {
 		printf("The Block Offset is not divisible 4\n");
+		printf("DATA: %x\n", aData);
 		uint32_t myNewData = 0;
 		uint32_t myCacheData = 0;
 		uint32_t myData = 0;
@@ -433,7 +435,7 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 		printf("This is the data being written: %x\n", myNewData);
 		write_specific_data_to_block(myCacheBlock, myBlockIndex, myNewData);
 
-
+		printf("\n\n");
 		if (myBlockOffset >= 29) {
 			mySetIndex = get_next_set(mySetIndex);
 			if (mySetIndex == 0) {
@@ -452,6 +454,8 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 	
 		myNewData = myData | (myCacheData << (myRemainder*8));
 		printf("This is the data being written: %x\n", myNewData);
+			printf("\n\n");
+	
 
 		write_specific_data_to_block(myCacheBlock, myBlockIndex, myNewData);
 
