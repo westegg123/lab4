@@ -285,14 +285,16 @@ void cache_update(cache_t *aCache, uint64_t aAddr) {
 	cache_set_t *myCacheSet = &(aCache->cache_sets[mySetIndex]);
 	cache_block_t *myCacheBlock = get_tag_match(myCacheSet, myTag, aCache->ways);
 
-	//printf("In cache Update\n");
-	//printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
+	// printf("In cache Update\n");
+	// printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
 
 	if (myCacheBlock == NULL) {
 		myCacheBlock = least_recently_used_block(myCacheSet, aCache->ways);
 		if (myCacheType == 1) {
+			// printf("loading cache block IC\n");
 			load_cache_block_IC(myCacheBlock, myTag, mySetIndex);
 		} else if (myCacheType == 2) {
+			// printf("loading cache block DC\n");
 			load_cache_block_DC(myCacheBlock, myTag, mySetIndex);
 		}
 	} else {
@@ -348,6 +350,7 @@ uint32_t read_cache(cache_t *aCache, uint64_t aAddr) {
 
 	//printf("In read cache\n");
 	//printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
+	
 	if ((myBlockOffset % 4) == 0) {
 		myBlockOffset = myBlockOffset / 4;
 		data = get_specific_data_from_block(myCacheBlock, myBlockOffset);
@@ -397,11 +400,12 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 		cache_update(aCache, aAddr);
 		myCacheBlock = get_tag_match(myCacheSet, myTag, aCache->ways);
 	}
+
 	myCacheBlock->last_used_iteration = stat_cycles;
 	myCacheBlock->dirty_bit = 1;
 	
-	//printf("In Write to cache\n");
-	//printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
+	// printf("In Write to cache\n");
+	// printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
 	
 	if ((myBlockOffset % 4) == 0) {
 		myBlockOffset = myBlockOffset / 4;

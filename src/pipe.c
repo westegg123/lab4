@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 0;
+int VERBOSE = 1;
 int CACHE_VERBOSE = 1;
 
 /************************************ CONSTANTS ************************************/
@@ -550,8 +550,6 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER, uint64_t aMe
 		} else if (INSTRUCTION_HOLDER.opcode == 0x3C2) {
 			CURRENT_REGS.MEM_WB.fetched_data = 
 				get_memory_segment(0,15, read_cache(theDataCache, aMemoryAddr));
-		
-
 		} else /* store */{
 			if (INSTRUCTION_HOLDER.opcode != STUR) {
 				write_to_cache(theDataCache, aMemoryAddr, aDataToWrite);
@@ -715,7 +713,24 @@ void pipe_stage_execute() {
 
 	if (get_memRead(get_holder(START_REGS.MEM_WB.instruction).opcode)) {
 		int bubble_result = hazard_detection_unit(CURRENT_REGS.ID_EX.instruction, START_REGS.MEM_WB.instruction);
-		forward_data(HOLDER, bubble_result, CURRENT_REGS.MEM_WB.fetched_data);
+		forward_data(HOLDER, bubble_result, START_REGS.MEM_WB.fetched_data);
+
+		if (bubble_result == 2) {
+			//printf("This is RN: %d and Primary: %d\n", CURRENT_STATE.REGS[HOLDER.Rn], CURRENT_REGS.ID_EX.primary_data_holder);
+			if (CURRENT_STATE.REGS[HOLDER.Rn] != CURRENT_REGS.ID_EX.primary_data_holder) {
+				CURRENT_REGS.ID_EX.primary_data_holder = CURRENT_STATE.REGS[HOLDER.Rn];
+			}
+		} else if (bubble_result == 1 && (HOLDER.Rm != HOLDER.Rn)) {
+			//printf("This is Rm: %d and second: %d\n", CURRENT_STATE.REGS[HOLDER.Rm], CURRENT_REGS.ID_EX.secondary_data_holder);
+			if (HOLDER.format == 1) {	
+				if (HOLDER.opcode != LSL && HOLDER.opcode != LSR && HOLDER.opcode != BR) { 
+					if (CURRENT_STATE.REGS[HOLDER.Rm] != CURRENT_REGS.ID_EX.primary_data_holder) {
+						CURRENT_REGS.ID_EX.secondary_data_holder = CURRENT_STATE.REGS[HOLDER.Rm];
+					}
+				}
+			}
+		}
+
 	}
 
 	if (CYCLE_STALL_DATA_CACHE != 0) {
@@ -729,6 +744,8 @@ void pipe_stage_execute() {
 	uint32_t myPredictedNextInstructionPC = CURRENT_REGS.IF_ID.PC;
 	
 	if (HOLDER.format == 1) {
+		printf("THIS is primary: %d, this is secondary_data_holder: %d\n", CURRENT_REGS.ID_EX.primary_data_holder,
+			CURRENT_REGS.ID_EX.secondary_data_holder);
 		if (HOLDER.opcode == 0x458 || HOLDER.opcode == 0x459) {
 			handle_add();
 		} else if (HOLDER.opcode == 0x558 || HOLDER.opcode == 0x559) {
@@ -838,14 +855,8 @@ void pipe_stage_decode() {
 		clear_ID_EX_REGS();
 		return;
 	} else if (CURRENT_REGS.IF_ID.instruction == HLT) {
-		clear_ID_EX_REGS();
 		CURRENT_REGS.ID_EX.instruction = CURRENT_REGS.IF_ID.instruction;
 		CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
-		//FETCH_MORE = 2;
-		
-		//FETCH_MORE = 0;
-		//CURRENT_STATE.PC = CURRENT_REGS.IF_ID.PC + 8;
-		
 		clear_IF_ID_REGS();
 		return;
 	}
