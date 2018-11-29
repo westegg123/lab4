@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 1;
+int VERBOSE = 0;
 int CACHE_VERBOSE = 1;
 
 /************************************ CONSTANTS ************************************/
