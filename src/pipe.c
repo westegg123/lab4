@@ -687,7 +687,7 @@ void pipe_stage_execute() {
 	} else if (CURRENT_REGS.ID_EX.instruction == HLT) {
 		clear_EX_MEM_REGS();
 		FETCH_MORE = 0;
-		CURRENT_STATE.PC = CURRENT_REGS.ID_EX.PC + 8;
+		// CURRENT_STATE.PC = CURRENT_REGS.ID_EX.PC + 8; NO NEED BRUH
 		CURRENT_REGS.EX_MEM.instruction = CURRENT_REGS.ID_EX.instruction;
 		return;
 	}
