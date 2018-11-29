@@ -447,12 +447,12 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 			myBlockIndex += 1;
 		}
 
-		myNewData = get_instruction_segment(myRemainder*8, 31, get_specific_data_from_block(myCacheBlock, myBlockIndex));
-		append = get_instruction_segment(myRemainder*8, 31, aData);
+		myCacheData = get_instruction_segment(myRemainder*8, 31, get_specific_data_from_block(myCacheBlock, myBlockIndex));
+		myData = get_instruction_segment((4-myRemainder)*8, 31, aData);
+	
+		myNewData = myData | (myCacheData << (myRemainder*8));
 		printf("This is the data being written: %x\n", myNewData);
 
-
-		myNewData = append | (myNewData << (myRemainder*8));
 		write_specific_data_to_block(myCacheBlock, myBlockIndex, myNewData);
 
 		myCacheBlock->dirty_bit = 1;
