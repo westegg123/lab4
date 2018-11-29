@@ -859,6 +859,7 @@ void pipe_stage_decode() {
 	} else if (CURRENT_REGS.IF_ID.instruction == HLT) {
 		CURRENT_REGS.ID_EX.instruction = CURRENT_REGS.IF_ID.instruction;
 		CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
+		printf("This is the PC: %lx\n", CURRENT_REGS.IF_ID.PC);
 		clear_IF_ID_REGS();
 		return;
 	}
@@ -917,10 +918,8 @@ void pipe_stage_fetch() {
 
 	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50 && CURRENT_REGS.IF_ID.instruction != 0) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
-			printf("ASD!!!\n");
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
 		}
-		printf("SSSSSSSSSSSSSS\n");
 		// print_operation(CURRENT_REGS.IF_ID.instruction);
 		return;
 	}
@@ -952,6 +951,11 @@ void pipe_stage_fetch() {
 			CURRENT_REGS.IF_ID_RESERVOIR.PC = CURRENT_STATE.PC;
 			CURRENT_REGS.IF_ID_RESERVOIR.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
 			CURRENT_REGS.IF_ID_RESERVOIR.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
+			
+			if (CURRENT_REGS.IF_ID_RESERVOIR.instruction == HLT) {
+				RUN_BIT = 0;
+			}
+
 			bp_predict();
 		} else {
 			if (CURRENT_REGS.IF_ID_RESERVOIR.PC == 0) /*reservoir empty*/{
@@ -961,6 +965,10 @@ void pipe_stage_fetch() {
 				CURRENT_REGS.IF_ID.PC = CURRENT_STATE.PC;
 				CURRENT_REGS.IF_ID.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
 				CURRENT_REGS.IF_ID.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
+
+				if (CURRENT_REGS.IF_ID.instruction == HLT) {
+					RUN_BIT = 0;
+				}
 				bp_predict();
 			} else /*reservoir full */{
 				printf("USING RESERVOIR REGS\n");
@@ -976,9 +984,6 @@ void pipe_stage_fetch() {
 		}
 
 
-		// if (FETCH_MORE == 2) {
-		// 	FETCH_MORE = 0;
-		// }
 	} else if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE != 0)) {
 		if (!CYCLE_STALL_DATA_CACHE) {
 			clear_IF_ID_REGS();
