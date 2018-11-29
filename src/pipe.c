@@ -536,6 +536,7 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER, uint64_t aMe
 	print_cache_behavior(2);
 
 	if (CYCLE_STALL_DATA_CACHE == 0) {
+		//printf("THis is the cycle: %d\n", stat_cycles +1);
 		if (INSTRUCTION_HOLDER.opcode == 0x7C2) {
 			CURRENT_REGS.MEM_WB.fetched_data = 
 				mem_read_64_DC(aMemoryAddr);
@@ -557,15 +558,11 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER, uint64_t aMe
 			}
 		}
 	} else {
+		//printf("THIS IS THE CYCLE STALL: %d\n", CYCLE_STALL_DATA_CACHE);
 		if (CYCLE_STALL_DATA_CACHE == 1) {
+			//printf("This is the cycle: %d\n", stat_cycles +1);
 			cache_update(theDataCache, aMemoryAddr);
 		}
-
-		// if (CYCLE_STALL_DATA_CACHE == 50) {
-		// 	CURRENT_REGS.MEM_WB.data_to_write = CURRENT_REGS.EX_MEM.data_to_write;
-		// 	CURRENT_REGS.MEM_WB.ALU_result = CURRENT_REGS.EX_MEM.ALU_result;
-		// 	CURRENT_REGS.MEM_WB.instruction = CURRENT_REGS.EX_MEM.instruction;
-		// }
 	}
 }
 
@@ -636,12 +633,12 @@ void pipe_stage_mem() {
 	}
 
 	if (CURRENT_REGS.EX_MEM.instruction == 0) {
-		//printf("Memmeory Stage Skipped\n");
 		if (CYCLE_STALL_DATA_CACHE == 0) {
+			printf("IS this called;\n");
 			clear_MEM_WB_REGS();
 		}
 		return;
-	} else if ( CURRENT_REGS.EX_MEM.instruction == HLT) {
+	} else if (CURRENT_REGS.EX_MEM.instruction == HLT) {
 		clear_MEM_WB_REGS();
 		CURRENT_REGS.MEM_WB.instruction = CURRENT_REGS.EX_MEM.instruction;
 		return;
@@ -678,13 +675,15 @@ void pipe_stage_execute() {
 	
 	// printf("PC OF INSTRUCTION TO EXECUTE: %lx. PC OF NEXT INSTRUCTION: %lx\n", CURRENT_REGS.ID_EX.PC, CURRENT_REGS.IF_ID.PC);
 
-
 	if (CURRENT_REGS.ID_EX.instruction == 0) {
 		if (CYCLE_STALL_DATA_CACHE == 0) {
 			clear_EX_MEM_REGS();	
 		}
 		return;
 	} else if (CURRENT_REGS.ID_EX.instruction == HLT) {
+		if (CYCLE_STALL_DATA_CACHE != 0) {
+			return;
+		}
 		clear_EX_MEM_REGS();
 		FETCH_MORE = 0;
 		// CURRENT_STATE.PC = CURRENT_REGS.ID_EX.PC + 8; NO NEED BRUH
@@ -739,6 +738,7 @@ void pipe_stage_execute() {
 	if (CYCLE_STALL_DATA_CACHE != 0) {
 		return;
 	}
+	printf("IN EX 2\n");
 
 	clear_EX_MEM_REGS();
 	
@@ -859,7 +859,6 @@ void pipe_stage_decode() {
 	} else if (CURRENT_REGS.IF_ID.instruction == HLT) {
 		CURRENT_REGS.ID_EX.instruction = CURRENT_REGS.IF_ID.instruction;
 		CURRENT_REGS.ID_EX.PC = CURRENT_REGS.IF_ID.PC;
-		printf("This is the PC: %lx\n", CURRENT_REGS.IF_ID.PC);
 		clear_IF_ID_REGS();
 		return;
 	}
