@@ -510,8 +510,7 @@ void pipe_cycle() {
 uint64_t mem_read_64_DC(uint64_t aAddr) {
 	uint64_t bit31_0 = read_cache(theDataCache, aAddr);
 	uint64_t bit63_32 = read_cache(theDataCache, aAddr + 4);
-	printf("DATA READ BY DATA CACHE: %lx\n", ((bit63_32 << 32) | bit63_32));
-	return ((bit63_32 << 32) | bit63_32);
+	return ((bit63_32 << 32) | bit31_0);
 }
 
 void mem_write_64_DC(uint64_t aAddr, uint64_t aValue) {
@@ -532,6 +531,8 @@ void handle_load_stur(parsed_instruction_holder INSTRUCTION_HOLDER, uint64_t aMe
 
 	if (myDataCacheMissed != 0) {
 		CYCLE_STALL_DATA_CACHE = 50;
+		// TEMPORARY, LOOK FOR WORK AROUND!
+		stat_inst_retire--;
 	}
 	print_cache_behavior(2);
 
@@ -577,7 +578,7 @@ void pipe_stage_wb() {
 		print_operation(CURRENT_REGS.MEM_WB.instruction);
 	}
 	
-	if (CURRENT_REGS.MEM_WB.instruction == 0) {
+	if (CURRENT_REGS.MEM_WB.instruction == 0 || CYCLE_STALL_DATA_CACHE == 50) {
 		return;
 	} else if (CURRENT_REGS.MEM_WB.instruction == HLT) {
 		stat_inst_retire++;
@@ -897,11 +898,13 @@ void pipe_stage_fetch() {
 	if (VERBOSE) {
 		printf("Fetch -----------> ");
 	}
+	print_cache_behavior(1);
 
 	if (CYCLE_STALL_DATA_CACHE != 0 && CYCLE_STALL_DATA_CACHE != 50) {
 		if (CYCLE_STALL_INSTRUCT_CACHE == 1) {
 			cache_update(theInstructionCache, CURRENT_STATE.PC);
 		}
+		print_operation(CURRENT_REGS.IF_ID.instruction);
 		return;
 	}
 	
@@ -925,7 +928,6 @@ void pipe_stage_fetch() {
 		CYCLE_STALL_INSTRUCT_CACHE = 50;
 	}
 
-	print_cache_behavior(1);
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		if (CYCLE_STALL_DATA_CACHE == 50) {
 			printf("SET RESERVOIR REGS!\n");
