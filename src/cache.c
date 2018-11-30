@@ -175,7 +175,9 @@ cache_block_t *get_tag_match(cache_set_t *aCacheSet, uint64_t aTag, int aAssocia
 // Write the Block back to memory to handle evictions
 void write_back_block_to_mem(cache_block_t *aCacheBlock, uint64_t aOriginAddr) {
 	int offset = 0;
+	//printf("This is the origin add: %lx\n", aOriginAddr);
 	for (int i = 0; i < 8; i++) {
+		//printf("%lu -> %x\n", (aOriginAddr + offset), (aCacheBlock->written_data)[i]);
 		mem_write_32((aOriginAddr + offset), (aCacheBlock->written_data)[i]);
 		offset += 4;
 	}	
@@ -207,7 +209,8 @@ void load_cache_block_DC(cache_block_t *aCacheBlock, uint64_t aTag, uint32_t aSe
 	uint64_t myOriginAddr = get_OriginAddr_DC(aTag, aSet);
 	
 	if (aCacheBlock->dirty_bit == 1) {
-		write_back_block_to_mem(aCacheBlock, myOriginAddr);
+		uint64_t myTemp = get_OriginAddr_DC(aCacheBlock->tag, aSet);
+		write_back_block_to_mem(aCacheBlock, myTemp);
 	}
 
 	for (int i = 0; i < 8; i++) {
@@ -415,8 +418,7 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 	myCacheBlock->last_used_iteration = stat_cycles;
 	myCacheBlock->dirty_bit = 1;
 	
-	// printf("In Write to cache (%d)\n", stat_cycles+1);
-	// printf("This is Tag: %lx, Set: %d, Offset: %d\n", myTag, mySetIndex, myBlockOffset);
+	//printf("%lx -> This is Tag: %lx, Set: %d, Offset: %d\n", aAddr, myTag, mySetIndex, myBlockOffset);
 
 	if ((myBlockOffset % 4) == 0) {
 		myBlockOffset = myBlockOffset / 4;
@@ -431,7 +433,7 @@ void write_to_cache(cache_t *aCache, uint64_t aAddr, uint32_t aData) {
 		int myBlockIndex = myBlockOffset / 4;
 		
 
-		print_block(myCacheBlock);
+		//print_block(myCacheBlock);
 		myCacheData = get_instruction_segment(0, (myRemainder*8)-1, get_specific_data_from_block(myCacheBlock, myBlockIndex));
 		myData = get_instruction_segment(0, ((4-myRemainder)*8) - 1, aData);
 

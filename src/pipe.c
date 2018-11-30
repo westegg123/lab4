@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 1;
+int VERBOSE = 0;
 int CACHE_VERBOSE = 0;
 
 /************************************ CONSTANTS ************************************/
@@ -942,7 +942,7 @@ void pipe_stage_fetch() {
 
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		if (CYCLE_STALL_DATA_CACHE == 50) {
-			printf("SET RESERVOIR REGSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!\n");
+			//printf("SET RESERVOIR REGSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!\n");
 			CURRENT_REGS.IF_ID_RESERVOIR.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 			CURRENT_REGS.IF_ID_RESERVOIR.PC = CURRENT_STATE.PC;
 			CURRENT_REGS.IF_ID_RESERVOIR.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
