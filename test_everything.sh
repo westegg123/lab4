@@ -1,26 +1,27 @@
 #!/bin/bash
 
+rm diff.txt
+echo "" > dif.txt
+echo "Begin all diffs:" >> diff.txt
 for file in `ls inputs/*.x`
 do
-	echo "Testing: $file"
-	./sim "$file" < run.txt > my_results.txt
-	./ref_sim_lab "$file" < run.txt > ref_results.txt
-	diff my_results.txt ref_results.txt
-	rm my_results.txt
-	rm ref_results.txt
+	echo "Testing: $file" >> diff.txt
+	sh ./test_singular.sh "$file"
 done
 
-for file in `ls inputs_lab2/*.x`
+for file in `ls inputslab2/*.x`
 do
-        echo "Testing: $file"
-        ./sim "$file" < run.txt > my_results.txt
-        ./ref_sim_lab "$file" < run.txt > ref_results.txt
-        diff my_results.txt ref_results.txt
-        rm my_results.txt
-        rm ref_results.txt
+    echo "Testing: $file" >> diff.txt
+	sh ./test_singular.sh "$file"
+done
+
+for file in `ls inputslab3/*.x`
+do
+    echo "Testing: $file" >> diff.txt
+	sh ./test_singular.sh "$file"
 done
 
 
-echo "DONE TESTING"
+echo "Finish diffs" >> diff.txt
 
 exit
