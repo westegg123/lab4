@@ -50,6 +50,7 @@ typedef struct Pipeline_Regs {
 	IF_ID_REGS IF_ID;
 	ID_EX_REGS ID_EX;
 	EX_MEM_REGS EX_MEM;
+	EX_MEM_REGS TEMP_EX_MEM;
 	MEM_WB_REGS MEM_WB;
 } Pipeline_Regs;
 

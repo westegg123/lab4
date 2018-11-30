@@ -391,7 +391,7 @@ int main(int argc, char *argv[]) {
 
   initialize(argv[1], argc - 1);
 
-  if ( (dumpsim_file = fopen( "dumpsim", "w" )) == NULL ) {
+  if ( (dumpsim_file = fopen( "dumpsim_andreas", "w" )) == NULL ) {
     printf("Error: Can't open dumpsim file\n");
     exit(-1);
   }

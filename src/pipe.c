@@ -32,7 +32,7 @@ cache_t *theInstructionCache;
 cache_t *theDataCache;
 
 /************************ TURN ON VERBOSE MODE IF 1 ******************************/
-int VERBOSE = 0;
+int VERBOSE = 1;
 int CACHE_VERBOSE = 0;
 
 /************************************ CONSTANTS ************************************/
@@ -267,7 +267,6 @@ int forward(uint32_t depend_instruct, uint32_t ind_instruct) {
 
 void set_settings_pred_miss (uint32_t aActualNextInstructionPC) {
 	BUBBLE = 1;
-	
 	if (CYCLE_STALL_INSTRUCT_CACHE != 0) {
 		if ((get_instruction_cache_tag(CURRENT_STATE.PC) != 
 				get_instruction_cache_tag(aActualNextInstructionPC)) || 
@@ -576,7 +575,7 @@ void pipe_stage_wb() {
 		return;
 	} else if (CURRENT_REGS.MEM_WB.instruction == HLT) {
 		stat_inst_retire++;
-	// printf("RETIRE INSTR 1\n");
+		// printf("RETIRE INSTR 1\n");
 		RUN_BIT = 0;
 		return;
 	}
@@ -634,7 +633,6 @@ void pipe_stage_mem() {
 
 	if (CURRENT_REGS.EX_MEM.instruction == 0) {
 		if (CYCLE_STALL_DATA_CACHE == 0) {
-			printf("IS this called;\n");
 			clear_MEM_WB_REGS();
 		}
 		return;
@@ -696,7 +694,9 @@ void pipe_stage_execute() {
 		if (VERBOSE) {
 			printf("BUBBLING!\n");
 		}
-		clear_EX_MEM_REGS();
+		if (CYCLE_STALL_DATA_CACHE == 0) {
+			clear_EX_MEM_REGS();
+		}
 		return;
 	}
 
@@ -738,7 +738,6 @@ void pipe_stage_execute() {
 	if (CYCLE_STALL_DATA_CACHE != 0) {
 		return;
 	}
-	printf("IN EX 2\n");
 
 	clear_EX_MEM_REGS();
 	
@@ -927,8 +926,6 @@ void pipe_stage_fetch() {
 		if (VERBOSE) {
 			printf("BUBBLE\n");
 		}
-		printf("BUBBLE\n");
-		// printf("BUBBLE. PC: %lx\n", CURRENT_STATE.PC);
 		return;
 	}
 
@@ -945,15 +942,15 @@ void pipe_stage_fetch() {
 
 	if ((FETCH_MORE != 0) && (CYCLE_STALL_INSTRUCT_CACHE == 0)) {
 		if (CYCLE_STALL_DATA_CACHE == 50) {
-			//printf("SET RESERVOIR REGS!\n");
+			printf("SET RESERVOIR REGSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!\n");
 			CURRENT_REGS.IF_ID_RESERVOIR.instruction = read_cache(theInstructionCache, CURRENT_STATE.PC);
 			CURRENT_REGS.IF_ID_RESERVOIR.PC = CURRENT_STATE.PC;
 			CURRENT_REGS.IF_ID_RESERVOIR.accessed_entry = BP.BTB[get_BTB_index(CURRENT_STATE.PC)];
 			CURRENT_REGS.IF_ID_RESERVOIR.PHT_result = should_take_branch(BP.gshare.PHT[(BP.gshare.GHR ^ get_8_pc_bits(CURRENT_STATE.PC))]);
 			
-			if (CURRENT_REGS.IF_ID_RESERVOIR.instruction == HLT) {
-				RUN_BIT = 0;
-			}
+			// if (CURRENT_REGS.IF_ID_RESERVOIR.instruction == HLT) {
+			// 	RUN_BIT = 0;
+			// }
 
 			bp_predict();
 		} else {
